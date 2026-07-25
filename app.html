@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cadence — Your practice dashboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231F4F45'/%3E%3Cpath d='M5 19 C8 19 8 12 11 12 C14 12 14 22 17 22 C20 22 20 9 23 9' stroke='%23EEF2F0' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='23' cy='9' r='2.4' fill='%23E2A33D'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root{
+    --paper:#EEF2F0; --surface:#FFFFFF; --ink:#1F2E2B; --ink-soft:#4B5A56;
+    --teal:#2F6F62; --teal-deep:#1F4F45; --amber:#E2A33D; --line:#C8D3CE;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--paper); color:var(--ink); font-family:'IBM Plex Sans', sans-serif; line-height:1.5; min-height:100vh;}
+  a{color:var(--teal-deep);}
+
+  header{border-bottom:1px solid var(--line); padding:16px 0; background:var(--surface);}
+  .topbar{max-width:1000px; margin:0 auto; padding:0 24px; display:flex; justify-content:space-between; align-items:center;}
+  .logo{font-family:'Fraunces', serif; font-size:19px; font-weight:600; display:flex; align-items:center; gap:8px; text-decoration:none; color:var(--ink);}
+  .logout-btn{
+    background:none; border:1px solid var(--line); color:var(--ink-soft); padding:8px 14px;
+    border-radius:6px; font-size:13px; cursor:pointer; font-family:'IBM Plex Sans', sans-serif;
+  }
+  .logout-btn:hover{border-color:var(--ink);}
+
+  /* AUTH VIEW */
+  .auth-wrap{max-width:380px; margin:80px auto; padding:0 24px;}
+  .auth-card{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:32px;}
+  .auth-card h1{font-family:'Fraunces', serif; font-size:24px; font-weight:500; margin-bottom:6px;}
+  .auth-card p.sub{color:var(--ink-soft); font-size:14px; margin-bottom:24px;}
+  .field{margin-bottom:14px;}
+  .field label{font-size:13px; font-weight:600; display:block; margin-bottom:6px;}
+  .field input{
+    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:6px;
+    font-family:'IBM Plex Sans', sans-serif; font-size:14px; background:var(--paper);
+  }
+  .auth-btn{
+    width:100%; background:var(--teal); color:#fff; border:none; padding:12px; border-radius:6px;
+    font-weight:600; font-size:14px; cursor:pointer; margin-top:6px;
+  }
+  .auth-btn:hover{background:var(--teal-deep);}
+  .auth-switch{text-align:center; font-size:13px; color:var(--ink-soft); margin-top:18px;}
+  .auth-switch a{cursor:pointer; font-weight:600;}
+  .auth-msg{font-size:13px; margin-top:14px; padding:10px; border-radius:6px;}
+  .auth-msg.error{background:#FBEAEA; color:#A13A3A;}
+  .auth-msg.success{background:#E8F1EE; color:var(--teal-deep);}
+
+  /* APP VIEW */
+  .app-wrap{max-width:1000px; margin:0 auto; padding:32px 24px;}
+  .app-tabs{display:flex; gap:8px; margin-bottom:24px; border-bottom:1px solid var(--line); flex-wrap:wrap;}
+  .app-tab{
+    padding:10px 16px; font-size:14px; font-weight:600; color:var(--ink-soft); cursor:pointer;
+    border-bottom:2px solid transparent; margin-bottom:-1px;
+  }
+  .app-tab.active{color:var(--teal-deep); border-bottom-color:var(--teal);}
+  .panel{display:none;}
+  .panel.active{display:block;}
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:24px; margin-bottom:16px;}
+  .card h3{font-family:'Fraunces', serif; font-size:18px; font-weight:500; margin-bottom:16px;}
+  .form-row{display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;}
+  .form-row input, .form-row select, .form-row textarea{
+    flex:1; min-width:160px; padding:10px 12px; border:1px solid var(--line); border-radius:6px;
+    font-family:'IBM Plex Sans', sans-serif; font-size:14px; background:var(--paper);
+  }
+  .form-row textarea{width:100%; min-height:70px; resize:vertical;}
+  .btn{
+    background:var(--teal); color:#fff; border:none; padding:10px 18px; border-radius:6px;
+    font-weight:600; font-size:14px; cursor:pointer; white-space:nowrap;
+  }
+  .btn:hover{background:var(--teal-deep);}
+  .btn.small{padding:5px 12px; font-size:12px; background:var(--amber);}
+  .row{
+    display:flex; justify-content:space-between; align-items:center; padding:10px 0;
+    border-top:1px solid var(--line); font-size:14px;
+  }
+  .row:first-of-type{border-top:none;}
+  .tag{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; padding:3px 9px; border-radius:12px;
+    background:rgba(47,111,98,0.12); color:var(--teal-deep);
+  }
+  .empty{color:var(--ink-soft); font-style:italic; font-size:13px; padding:8px 0;}
+  .loading{text-align:center; padding:60px; color:var(--ink-soft);}
+  .save-msg{font-size:13px; color:var(--teal-deep); margin-top:8px;}
+</style>
+</head>
+<body>
+
+<div id="loadingView" class="loading">Loading…</div>
+
+<div id="authView" style="display:none;">
+  <header>
+    <div class="topbar">
+      <a href="index.html" class="logo">
+        <svg width="26" height="26" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="32" height="32" rx="8" fill="#1F4F45"/>
+          <path d="M5 19 C8 19 8 12 11 12 C14 12 14 22 17 22 C20 22 20 9 23 9" stroke="#EEF2F0" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="23" cy="9" r="2.4" fill="#E2A33D"/>
+        </svg>
+        Cadence
+      </a>
+    </div>
+  </header>
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <h1 id="authTitle">Log in to your practice</h1>
+      <p class="sub" id="authSub">Enter your email and password to continue.</p>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="authEmail" placeholder="you@practice.com">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="authPassword" placeholder="••••••••">
+      </div>
+      <button class="auth-btn" id="authSubmit">Log in</button>
+      <div class="auth-switch">
+        <span id="switchText">Don't have an account? <a id="switchLink">Sign up</a></span>
+      </div>
+      <div id="authMsg"></div>
+    </div>
+  </div>
+</div>
+
+<div id="appView" style="display:none;">
+  <header>
+    <div class="topbar">
+      <a href="index.html" class="logo">
+        <svg width="26" height="26" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="32" height="32" rx="8" fill="#1F4F45"/>
+          <path d="M5 19 C8 19 8 12 11 12 C14 12 14 22 17 22 C20 22 20 9 23 9" stroke="#EEF2F0" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="23" cy="9" r="2.4" fill="#E2A33D"/>
+        </svg>
+        Cadence
+      </a>
+      <button class="logout-btn" id="logoutBtn">Log out</button>
+    </div>
+  </header>
+
+  <div class="app-wrap">
+    <div class="app-tabs" id="appTabs">
+      <div class="app-tab active" data-tab="clients">Clients</div>
+      <div class="app-tab" data-tab="notes">Notes</div>
+      <div class="app-tab" data-tab="billing">Billing</div>
+      <div class="app-tab" data-tab="settings">Settings</div>
+    </div>
+
+    <div class="panel active" data-panel="clients">
+      <div class="card">
+        <h3>Add a client</h3>
+        <div class="form-row">
+          <input type="text" id="clientName" placeholder="Client name">
+          <input type="text" id="clientContact" placeholder="Email or phone">
+          <button class="btn" id="addClientBtn">Add client</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Your clients</h3>
+        <div id="clientList"><p class="empty">Loading…</p></div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="notes">
+      <div class="card">
+        <h3>Add a session note</h3>
+        <div class="form-row">
+          <select id="noteClient"><option value="">Select a client…</option></select>
+        </div>
+        <div class="form-row">
+          <textarea id="noteText" placeholder="Write the session note…"></textarea>
+        </div>
+        <button class="btn" id="addNoteBtn">Save note</button>
+      </div>
+      <div class="card">
+        <h3>Recent notes</h3>
+        <div id="noteList"><p class="empty">Loading…</p></div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="billing">
+      <div class="card">
+        <h3>Create an invoice</h3>
+        <div class="form-row">
+          <select id="invoiceClient"><option value="">Select a client…</option></select>
+          <input type="number" id="invoiceAmount" placeholder="Amount ($)">
+          <button class="btn" id="addInvoiceBtn">Send invoice</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Invoices</h3>
+        <div id="invoiceList"><p class="empty">Loading…</p></div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="settings">
+      <div class="card">
+        <h3>Practice settings</h3>
+        <div class="form-row">
+          <input type="text" id="practiceName" placeholder="Practice name">
+        </div>
+        <div class="form-row">
+          <input type="email" id="practiceEmail" placeholder="Booking contact email">
+        </div>
+        <button class="btn" id="saveSettingsBtn">Save settings</button>
+        <div id="settingsMsg" class="save-msg"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---- Supabase setup ----
+  const SUPABASE_URL = 'https://fptugxskpqtcyykhuaoj.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_LVpgBnN2NRCh3k3HLq2QxA_2ZomvarA';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let currentUser = null;
+  let isSignUp = false;
+
+  // ---- View switching ----
+  function showView(view){
+    document.getElementById('loadingView').style.display = view === 'loading' ? 'block' : 'none';
+    document.getElementById('authView').style.display = view === 'auth' ? 'block' : 'none';
+    document.getElementById('appView').style.display = view === 'app' ? 'block' : 'none';
+  }
+
+  // ---- Check session on load ----
+  async function init(){
+    const { data: { session } } = await sb.auth.getSession();
+    if(session){
+      currentUser = session.user;
+      showView('app');
+      loadAllData();
+    } else {
+      showView('auth');
+    }
+  }
+  init();
+
+  // ---- Auth form toggle (sign up / log in) ----
+  document.getElementById('switchText').addEventListener('click', (e) => {
+    if(e.target.id === 'switchLink'){
+      isSignUp = !isSignUp;
+      document.getElementById('authTitle').textContent = isSignUp ? 'Create your practice account' : 'Log in to your practice';
+      document.getElementById('authSub').textContent = isSignUp ? 'Set an email and password to get started.' : 'Enter your email and password to continue.';
+      document.getElementById('authSubmit').textContent = isSignUp ? 'Create account' : 'Log in';
+      document.getElementById('switchText').innerHTML = isSignUp
+        ? 'Already have an account? <a id="switchLink">Log in</a>'
+        : 'Don\'t have an account? <a id="switchLink">Sign up</a>';
+      document.getElementById('authMsg').innerHTML = '';
+    }
+  });
+
+  // ---- Auth submit ----
+  document.getElementById('authSubmit').addEventListener('click', async () => {
+    const email = document.getElementById('authEmail').value.trim();
+    const password = document.getElementById('authPassword').value;
+    const msgEl = document.getElementById('authMsg');
+    msgEl.innerHTML = '';
+    if(!email || !password){
+      msgEl.innerHTML = '<div class="auth-msg error">Enter both email and password.</div>';
+      return;
+    }
+    if(isSignUp){
+      const { data, error } = await sb.auth.signUp({ email, password });
+      if(error){
+        msgEl.innerHTML = `<div class="auth-msg error">${error.message}</div>`;
+      } else if(data.session){
+        currentUser = data.user;
+        showView('app');
+        loadAllData();
+      } else {
+        msgEl.innerHTML = '<div class="auth-msg success">Account created. Check your email to confirm, then log in.</div>';
+      }
+    } else {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if(error){
+        msgEl.innerHTML = `<div class="auth-msg error">${error.message}</div>`;
+      } else {
+        currentUser = data.user;
+        showView('app');
+        loadAllData();
+      }
+    }
+  });
+
+  // ---- Logout ----
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await sb.auth.signOut();
+    currentUser = null;
+    document.getElementById('authEmail').value = '';
+    document.getElementById('authPassword').value = '';
+    showView('auth');
+  });
+
+  // ---- Tab switching ----
+  document.getElementById('appTabs').addEventListener('click', (e) => {
+    const tab = e.target.closest('.app-tab');
+    if(!tab) return;
+    document.querySelectorAll('.app-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const name = tab.dataset.tab;
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelector(`[data-panel="${name}"]`).classList.add('active');
+  });
+
+  // ---- Load all data ----
+  async function loadAllData(){
+    await renderClients();
+    await renderClientOptions('noteClient');
+    await renderClientOptions('invoiceClient');
+    await renderNotes();
+    await renderInvoices();
+    await loadSettings();
+  }
+
+  // ---- Clients ----
+  async function renderClients(){
+    const { data, error } = await sb.from('clients').select('*').order('created_at', { ascending: false });
+    const el = document.getElementById('clientList');
+    if(error){ el.innerHTML = `<p class="empty">Error loading clients.</p>`; return; }
+    el.innerHTML = data.length ? data.map(c =>
+      `<div class="row"><span>${c.name} — ${c.contact || '—'}</span><span class="tag">Active</span></div>`
+    ).join('') : '<p class="empty">No clients yet — add your first one above.</p>';
+  }
+  document.getElementById('addClientBtn').addEventListener('click', async () => {
+    const name = document.getElementById('clientName').value.trim();
+    const contact = document.getElementById('clientContact').value.trim();
+    if(!name) return;
+    await sb.from('clients').insert({ name, contact, owner_id: currentUser.id });
+    document.getElementById('clientName').value = '';
+    document.getElementById('clientContact').value = '';
+    await renderClients();
+    await renderClientOptions('noteClient');
+    await renderClientOptions('invoiceClient');
+  });
+
+  async function renderClientOptions(selectId){
+    const { data } = await sb.from('clients').select('id, name').order('name');
+    const sel = document.getElementById(selectId);
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Select a client…</option>' +
+      (data || []).map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    sel.value = current;
+  }
+
+  // ---- Notes ----
+  async function renderNotes(){
+    const { data, error } = await sb.from('notes').select('*, clients(name)').order('created_at', { ascending: false });
+    const el = document.getElementById('noteList');
+    if(error){ el.innerHTML = `<p class="empty">Error loading notes.</p>`; return; }
+    el.innerHTML = data.length ? data.map(n =>
+      `<div class="row"><span>${n.clients ? n.clients.name : 'Unknown'} — "${n.note_text.slice(0,40)}${n.note_text.length>40?'…':''}"</span><span class="tag">Encrypted</span></div>`
+    ).join('') : '<p class="empty">No notes saved yet.</p>';
+  }
+  document.getElementById('addNoteBtn').addEventListener('click', async () => {
+    const client_id = document.getElementById('noteClient').value;
+    const note_text = document.getElementById('noteText').value.trim();
+    if(!client_id || !note_text) return;
+    await sb.from('notes').insert({ client_id, note_text, owner_id: currentUser.id });
+    document.getElementById('noteText').value = '';
+    await renderNotes();
+  });
+
+  // ---- Billing ----
+  async function renderInvoices(){
+    const { data, error } = await sb.from('invoices').select('*, clients(name)').order('created_at', { ascending: false });
+    const el = document.getElementById('invoiceList');
+    if(error){ el.innerHTML = `<p class="empty">Error loading invoices.</p>`; return; }
+    el.innerHTML = data.length ? data.map(inv =>
+      `<div class="row"><span>${inv.clients ? inv.clients.name : 'Unknown'} — $${inv.amount}</span>
+        ${inv.status === 'Paid' ? '<span class="tag">Paid</span>' : `<button class="btn small" data-id="${inv.id}">Mark paid</button>`}
+      </div>`
+    ).join('') : '<p class="empty">No invoices yet.</p>';
+    el.querySelectorAll('.btn.small').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await sb.from('invoices').update({ status: 'Paid' }).eq('id', btn.dataset.id);
+        await renderInvoices();
+      });
+    });
+  }
+  document.getElementById('addInvoiceBtn').addEventListener('click', async () => {
+    const client_id = document.getElementById('invoiceClient').value;
+    const amount = document.getElementById('invoiceAmount').value;
+    if(!client_id || !amount) return;
+    await sb.from('invoices').insert({ client_id, amount, owner_id: currentUser.id, status: 'Sent' });
+    document.getElementById('invoiceAmount').value = '';
+    await renderInvoices();
+  });
+
+  // ---- Settings (stored in user metadata) ----
+  async function loadSettings(){
+    const { data: { user } } = await sb.auth.getUser();
+    const meta = user.user_metadata || {};
+    document.getElementById('practiceName').value = meta.practice_name || '';
+    document.getElementById('practiceEmail').value = meta.practice_email || '';
+  }
+  document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
+    const practice_name = document.getElementById('practiceName').value.trim();
+    const practice_email = document.getElementById('practiceEmail').value.trim();
+    await sb.auth.updateUser({ data: { practice_name, practice_email } });
+    document.getElementById('settingsMsg').textContent = 'Saved.';
+    setTimeout(() => document.getElementById('settingsMsg').textContent = '', 2000);
+  });
+</script>
+</body>
+</html>
